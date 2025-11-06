@@ -1,36 +1,27 @@
-name: Testing and deployment
+name: Тестирование
 
 on:
   push:
-    branches: [master]
+    branches: [ master ]
 
 jobs:
   testing:
     runs-on: ubuntu-latest
-    env:
-      SECRET_KEY: ${{ secrets.SECRET }}
-      DJANGO_DEBUG: ${{ secrets.DEBUG_MODE }}
-      DJANGO_ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
-      DJANGO_DB: ${{ secrets.DJANGO_DB }}
-      DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
-      DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
-      DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
-      DJANGO_DB_HOST: ${{ secrets.DJANGO_DB_HOST }}
-      DJANGO_DB_PORT: ${{ secrets.DJANGO_DB_PORT }}
     services:
       postgresql_main:
         image: postgres:12
         env:
           POSTGRES_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}        # пароль суперпользователя
           POSTGRES_USER: ${{ secrets.DJANGO_DB_USER }}                # имя пользователя
-          POSTGRES_DB: ${{ secrets.DJANGO_DB_NAME }}
+          POSTGRES_DB: ${{ secrets.DJANGO_DB_NAME }}                  # имя БД
         ports:
           - 5432:5432
-        options:
+        options: >-
           --health-cmd pg_isready
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
+
     steps:
       - name: Проверяем на наличие изменений
         uses: actions/checkout@v4
@@ -46,15 +37,201 @@ jobs:
       - name: Линтинг
         run: flake8 --exclude=aa
 
+      - name: Ожидание готовности PostgreSQL
+        run: |
+          set -euo pipefail
+          # Ждём, пока база станет доступна
+          for i in {1..60}; do
+            if PGPASSWORD="${{ secrets.DJANGO_DB_PASSWORD }}" \
+               psql -h "postgresql_main" -U "${{ secrets.DJANGO_DB_USER }}" \
+               -d "${{ secrets.DJANGO_DB_NAME }}" -c '\q' 2>/dev/null; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
       - name: Тестирование
         run: python manage.py test
         env:
-          SECRET_KEY: ${{ env.SECRET_KEY }}
-          DJANGO_DEBUG: ${{ env.DJANGO_DEBUG }}
-          DJANGO_ALLOWED_HOSTS: ${{ env.ALLOWED_HOSTS }}
-          DJANGO_DB: ${{ env.DJANGO_DB }}
-          DJANGO_DB_NAME: ${{ env.DJANGO_DB_NAME }}
-          DJANGO_DB_USER: ${{ env.DJANGO_DB_USER }}
-          DJANGO_DB_PASSWORD: ${{ env.DJANGO_DB_PASSWORD }}
-          DJANGO_DB_PORT: ${{ env.DJANGO_DB_PORT }}
+          SECRET_KEY: ${{ secrets.SECRET }}
+          DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
+          DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
+          DJANGO_DB: ${{ secrets.DJANGO_DB }}
+          DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
+          DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
+          DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
+          DJANGO_DB_PORT: 5432
+          DJANGO_DB_HOST: postgresql_main
+Пояснения:
 
+HOST для Django установлен как postgresql_main (имя сервиса БД в workflow).
+Пароль передаётся через секрет DJANGO_DB_PASSWORD и используется как POSTGRES_PASSWORD в сервисе БД.
+Добавлен шаг ожидания готовности БД, чтобы избежать гонки между запуском тестов и инициализацией БД.
+Другие переменные (NAME, USER, PASSWORD, HOST, PORT) подставляются из секретов, которые вы используете ранее.
+Если у вас другая структура секретов или другой путь передачи параметров, скажите — адаптирую патч под ваши конкретные имена секретов и конфигурацию.
+
+shell: /usr/bin/bash -e {0} 4 env: 5 SECRET_KEY: *** 6 DJANGO_DEBUG: *** 7 DJANGO_ALLOWED_HOSTS: 8 DJANGO_DB: *** 9 DJANGO_DB_NAME: *** 10 DJANGO_DB_USER: *** 11 DJANGO_DB_PASSWORD: *** 12 DJANGO_DB_HOST: *** 13 DJANGO_DB_PORT: *** 14 pythonLocation: /opt/hostedtoolcache/Python/3.12.12/x64 15 PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.12/x64/lib/pkgconfig 16 Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64 17 Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64 18 Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64 19 LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.12/x64/lib 20 20 Creating test database for alias 'default'... 21 /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/django/db/backends/postgresql/base.py:512: RuntimeWarning: Normally Django will use a connection to the 'postgres' database to avoid running initialization queries against the production database when it's not needed (for example, when running tests). Django was unable to create a connection to the 'postgres' database and will use the first PostgreSQL database instead. 22 warnings.warn( 23 Found 2 test(s). 24 Traceback (most recent call last): 25 File "/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/django/db/backends/postgresql/base.py", line 507, in _nodb_cursor 26 with super()._nodb_cursor() as cursor: 27 ^^^^^^^^^^^^^^^^^^^^^^ 28 File "/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/contextlib.py", line 137, in __enter__ 29 return next(self.gen) 30 ^^^^^^^^^^^^^^ 31 File "/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/django/db/backends/base/base.py", line 712, in _nodb_cursor 32 with conn.cursor() as cursor: 33 ^^^^^^^^^^^^^ 34 File "/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner 35 return func(*args, **kwargs) 36 ^^^^^^^^^^^^^^^^^^^^^ 37 File "/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/django/db/backends/base/base.py", line 320, in cursor 38 return self._cursor() 39 ^^^^^^^^^^^^^^ 40 File "/opt/hostedtoolcache
+shell: /usr/bin/bash -e {0}
+  env:
+    SECRET_KEY: ***
+    DJANGO_DEBUG: ***
+    DJANGO_ALLOWED_HOSTS:
+    DJANGO_DB: ***
+    DJANGO_DB_NAME: ***
+    DJANGO_DB_USER: ***
+    DJANGO_DB_PASSWORD: ***
+    DJANGO_DB_HOST: ***
+    DJANGO_DB_PORT: ***
+    pythonLocation: /opt/hostedtoolcache/Python/3.12.12/x64
+    PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.12/x64/lib/pkgconfig
+    Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64
+    Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64
+    Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64
+    LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.12/x64/lib
+
+Creating test database for alias 'default'...
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/django/db/backends/postgresql/base.py:512: RuntimeWarning: Normally Django will use a connection to the 'postgres' database to avoid running initialization queries against the production database when it's not needed (for example, when running tests). Django was unable to create a connection to the 'postgres' database and will use the first PostgreSQL database instead.
+  warnings.warn(
+Found 2 test(s).
+Traceback (most recent call last):
+  File "/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/django/db/backends/postgresql/base.py", line 507, in _nodb_cursor
+    with super()._nodb_cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/django/db/backends/base/base.py", line 712, in _nodb_cursor
+    with conn.cursor() as cursor:
+         ^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/django/db/backends/base/base.py", line 320, in cursor
+    return self._cursor()
+           ^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache
+
+2
+/
+2
+
+Sider Fusion
+Спасибо за лог. Он свидетельствует о той же проблеме: Django не может подключиться к PostgreSQL в CI из-за проблемы аутентификации или доступа к БД.
+
+Коротко что сделать и как исправить в YAML workflow и настройках Django:
+
+Убедитесь, что HOST у Django указывает на имя сервиса БД, а не на локальный 127.0.0.1
+В вашем settings.py HOST берётся из окружения DJANGO_DB_HOST.
+В YAML workflow нужно устанавливать DJANGO_DB_HOST в значение имени сервиса БД, например postgresql_main (если вы используете сервис в GH Actions).
+Пример: DJANGO_DB_HOST: postgresql_main
+PORT обычно 5432.
+Убедитесь, что пароль совпадает
+Секрет DJANGO_DB_PASSWORD должен совпадать с POSTGRES_PASSWORD, который задаётся для сервиса БД.
+В вашем фрагменте workflow вы передаёте POSTGRES_PASSWORD через секрет DJANGO_DB_PASSWORD. Убедитесь, что в переменной DJANGO_DB_PASSWORD в рамках шага тестирования значение такое же.
+Убедитесь, что база и пользователь совпадают с тем, что Django ожидает
+NAME: DJANGO_DB_NAME
+USER: DJANGO_DB_USER
+PASSWORD: DJANGO_DB_PASSWORD
+HOST: postgresql_main
+PORT: 5432
+Если используете другие секреты/переменные, скорректируйте соответственно.
+Добавьте ожидание готовности DB перед тестами
+Приведёт к меньшему числу ошибок из-за гонки между стартом БД и попыткой подключения.
+Пример ожидания: psql -h postgresql_main -U "
+D
+J
+A
+N
+G
+O
+D
+B
+U
+S
+E
+R
+"
+−
+d
+"
+DJANGO 
+D
+​
+ B 
+U
+​
+ SER"−d"DJANGO_DB_NAME" -c '\q'
+Включите пример рабочего фрагмента YAML (полный контекст)
+Ниже фрагмент, который можно вставить в ваш файл .github/workflows/...:
+yaml
+name: Тестирование
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  testing:
+    runs-on: ubuntu-latest
+    services:
+      postgresql_main:
+        image: postgres:12
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
+          POSTGRES_USER: ${{ secrets.DJANGO_DB_USER }}
+          POSTGRES_DB: ${{ secrets.DJANGO_DB_NAME }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Проверяем на наличие изменений
+        uses: actions/checkout@v4
+
+      - name: Установка Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Установка зависимостей
+        run: pip install -r requirements.txt
+
+      - name: Линтинг
+        run: flake8 --exclude=aa
+
+      - name: Ожидание готовности PostgreSQL
+        run: |
+          set -euo pipefail
+          for i in {1..60}; do
+            if PGPASSWORD="${{ secrets.DJANGO_DB_PASSWORD }}" \
+               psql -h "postgresql_main" -U "${{ secrets.DJANGO_DB_USER }}" \
+               -d "${{ secrets.DJANGO_DB_NAME }}" -c '\q' 2>/dev/null; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+        env:
+          DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
+          DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
+          DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
+
+      - name: Тестирование
+        run: python manage.py test
+        env:
+          SECRET_KEY: ${{ secrets.SECRET }}
+          DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
+          DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
+          DJANGO_DB: ${{ secrets.DJANGO_DB }}
+          DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
+          DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
+          DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
+          DJANGO_DB_PORT: 5432
+          DJANGO_DB_HOST: postgresql_main
