@@ -19,7 +19,7 @@ jobs:
       DJANGO_DB_PORT: 5432
     services:
       postgresql_main:
-        image: postgres:12
+        image: postgres:14
         env:
           POSTGRES_DB: my_project
           POSTGRES_USER: ${{ secrets.DJANGO_DB_USER }}
