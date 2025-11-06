@@ -21,7 +21,7 @@ jobs:
       postgresql_main:
         image: postgres:12
         env:
-          POSTGRES_DB: ${{ secrets.DJANGO_DB_NAME }}
+          POSTGRES_DB: my_project
           POSTGRES_USER: ${{ secrets.DJANGO_DB_USER }}
           POSTGRES_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
         ports:
