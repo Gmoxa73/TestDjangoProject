@@ -49,7 +49,7 @@ jobs:
       - name: Ожидание готовности PostgreSQL
         run: |
           set -euo pipefail
-          for i in {1..20}; do
+          for i in {1..10}; do
             if PGPASSWORD="${{ secrets.DJANGO_DB_PASSWORD }}" \
                psql -h "postgresql_main" -U "${{ secrets.DJANGO_DB_USER }}" \
                -d "${{ secrets.DJANGO_DB_NAME }}" -c '\q' 2>/dev/null; then
@@ -63,7 +63,7 @@ jobs:
       - name: Тестирование
         run: python manage.py test
         env:
-          SECRET_KEY: ${{ secrets.SECRET }}
+          DJANGO_SECRET_KEY: ${{ secrets.SECRET }}
           DJANGO_DEBUG: ${{ secrets.DEBUG_MODE }}
           DJANGO_ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
           DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
