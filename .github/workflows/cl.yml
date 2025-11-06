@@ -3,17 +3,20 @@ name: Тестирование
 on:
   push:
     branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
   testing:
     runs-on: ubuntu-latest
+
     services:
       postgresql_main:
         image: postgres:12
         env:
-          POSTGRES_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
-          POSTGRES_USER: ${{ secrets.DJANGO_DB_USER }}
-          POSTGRES_DB: ${{ secrets.DJANGO_DB_NAME }}
+          POSTGRES_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}  # пароль БД
+          POSTGRES_USER: ${{ secrets.DJANGO_DB_USER }}          # пользователь
+          POSTGRES_DB: ${{ secrets.DJANGO_DB_NAME }}            # база
         ports:
           - 5432:5432
         options: >-
@@ -40,6 +43,7 @@ jobs:
       - name: Ожидание готовности PostgreSQL
         run: |
           set -euo pipefail
+          echo "Ожидание готовности PostgreSQL (host=postgresql_main, port=5432)"
           for i in {1..60}; do
             if PGPASSWORD="${{ secrets.DJANGO_DB_PASSWORD }}" \
                psql -h "postgresql_main" -U "${{ secrets.DJANGO_DB_USER }}" \
@@ -50,6 +54,13 @@ jobs:
             echo "Waiting for PostgreSQL..."
             sleep 2
           done
+          # если не готово после цикла — падать
+          if ! PGPASSWORD="${{ secrets.DJANGO_DB_PASSWORD }}" \
+               psql -h "postgresql_main" -U "${{ secrets.DJANGO_DB_USER }}" \
+               -d "${{ secrets.DJANGO_DB_NAME }}" -c '\q' 2>/dev/null; then
+            echo "PostgreSQL не стал готов к подключению за отведённое время"
+            exit 1
+          fi
         env:
           DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
           DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
