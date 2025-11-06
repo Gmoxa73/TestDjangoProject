@@ -50,7 +50,7 @@ jobs:
         run: python manage.py test
         env:
           SECRET_KEY: ${{ env.SECRET_KEY }}
-          DJANGO_DEBUG: ${{ evn.DEBUG  }}
+          DJANGO_DEBUG: ${{ evn.DJANGO_DEBUG  }}
           DJANGO_ALLOWED_HOSTS: ${{ env.ALLOWED_HOSTS }}
           DJANGO_DB: ${{ env.DJANGO_DB }}
           DJANGO_DB_NAME: ${{ env.DJANGO_DB_NAME }}
