@@ -1,30 +1,36 @@
-name: Тестирование
+name: Testing and deployment
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   testing:
     runs-on: ubuntu-latest
-
+    env:
+      SECRET_KEY: ${{ secrets.SECRET }}
+      DJANGO_DEBUG: ${{ secrets.DEBUG_MODE }}
+      DJANGO_ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
+      DJANGO_DB: ${{ secrets.DJANGO_DB }}
+      DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
+      DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
+      DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
+      DJANGO_DB_HOST: ${{ secrets.DJANGO_DB_HOST }}
+      DJANGO_DB_PORT: ${{ secrets.DJANGO_DB_PORT }}
     services:
       postgresql_main:
         image: postgres:12
         env:
-          POSTGRES_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}  # пароль БД
-          POSTGRES_USER: ${{ secrets.DJANGO_DB_USER }}          # пользователь
-          POSTGRES_DB: ${{ secrets.DJANGO_DB_NAME }}            # база
+          DJANGO_DB_NAME: ${{ env.DJANGO_DB_NAME }}
+          DJANGO_DB_USER: ${{ env.DJANGO_DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DJANGO_DB_PASSWORD }}
         ports:
           - 5432:5432
-        options: >-
+        options:
           --health-cmd pg_isready
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
-
     steps:
       - name: Проверяем на наличие изменений
         uses: actions/checkout@v4
@@ -40,41 +46,15 @@ jobs:
       - name: Линтинг
         run: flake8 --exclude=aa
 
-      - name: Ожидание готовности PostgreSQL
-        run: |
-          set -euo pipefail
-          echo "Ожидание готовности PostgreSQL (host=postgresql_main, port=5432)"
-          for i in {1..60}; do
-            if PGPASSWORD="${{ secrets.DJANGO_DB_PASSWORD }}" \
-               psql -h "postgresql_main" -U "${{ secrets.DJANGO_DB_USER }}" \
-               -d "${{ secrets.DJANGO_DB_NAME }}" -c '\q' 2>/dev/null; then
-              echo "PostgreSQL is ready"
-              break
-            fi
-            echo "Waiting for PostgreSQL..."
-            sleep 2
-          done
-          # если не готово после цикла — падать
-          if ! PGPASSWORD="${{ secrets.DJANGO_DB_PASSWORD }}" \
-               psql -h "postgresql_main" -U "${{ secrets.DJANGO_DB_USER }}" \
-               -d "${{ secrets.DJANGO_DB_NAME }}" -c '\q' 2>/dev/null; then
-            echo "PostgreSQL не стал готов к подключению за отведённое время"
-            exit 1
-          fi
-        env:
-          DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
-          DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
-          DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
-
       - name: Тестирование
         run: python manage.py test
         env:
-          SECRET_KEY: ${{ secrets.SECRET }}
-          DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
-          DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
-          DJANGO_DB: ${{ secrets.DJANGO_DB }}
-          DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
-          DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
-          DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
-          DJANGO_DB_PORT: 5432
-          DJANGO_DB_HOST: postgresql_main
+          SECRET_KEY: ${{ env.SECRET_KEY }}
+          DJANGO_DEBUG: ${{ evn.DJANGO_DEBUG }}
+          DJANGO_ALLOWED_HOSTS: ${{ env.ALLOWED_HOSTS }}
+          DJANGO_DB: ${{ env.DJANGO_DB }}
+          DJANGO_DB_NAME: ${{ env.DJANGO_DB_NAME }}
+          DJANGO_DB_USER: ${{ env.DJANGO_DB_USER }}
+          DJANGO_DB_PASSWORD: ${{ env.DJANGO_DB_PASSWORD }}
+          DJANGO_DB_PORT: ${{ env.DJANGO_DB_PORT }}
+
