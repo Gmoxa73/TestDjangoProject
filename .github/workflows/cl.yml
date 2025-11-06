@@ -8,7 +8,7 @@ jobs:
   testing:
     runs-on: ubuntu-latest
     env:
-      SECRET_KEY: ${{ secrets.SECRET }}
+      DJANGO_SECRET_KEY: ${{ secrets.SECRET }}
       DJANGO_DEBUG: ${{ secrets.DEBUG_MODE }}
       DJANGO_ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
       DJANGO_DB: ${{ secrets.DJANGO_DB }}
@@ -19,7 +19,7 @@ jobs:
       DJANGO_DB_PORT: 5432
     services:
       postgresql_main:
-        image: postgres:14
+        image: postgres:12
         env:
           POSTGRES_DB: my_project
           POSTGRES_USER: ${{ secrets.DJANGO_DB_USER }}
