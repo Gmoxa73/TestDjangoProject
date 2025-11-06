@@ -58,7 +58,7 @@ jobs:
           python manage.py migrate
 
       - name: Verify auth_user exists
-        run: python manage.py dbshell -c "\dt auth_user"
+        run: python manage.py shell -c "\dt auth_user"
 
       - name: Run tests
         env:
