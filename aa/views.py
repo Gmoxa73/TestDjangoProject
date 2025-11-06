@@ -10,7 +10,7 @@ class AvtModelViewSet(viewsets.ModelViewSet):
       def get_permissions(self):
           if self.request.method == 'GET':
               return [AllowAny()]
-          return [IsAuthenticated()]
+          return [AllowAny()]
 
       def perform_create(self, serializer):
           serializer.save(user=self.request.user)
