@@ -56,7 +56,7 @@ jobs:
               echo "PostgreSQL is ready"
               break
             fi
-            echo "Waiting for PostgreSQL..."
+            echo "Waiting for PostgreSQL... "
             sleep 2
           done
 
