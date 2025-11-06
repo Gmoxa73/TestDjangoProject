@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SECRET_KEY: ${{ secrets.SECRET }}
-      DJANGO_DEBUG: ${{ secrets.DEBUG_MODE  }}
+      DJANGO_DEBUG: ${{ secrets.DEBUG_MODE }}
       DJANGO_ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
       DJANGO_DB: ${{ secrets.DJANGO_DB }}
       DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
@@ -50,7 +50,7 @@ jobs:
         run: python manage.py test
         env:
           SECRET_KEY: ${{ env.SECRET_KEY }}
-          DJANGO_DEBUG: ${{ secrets.DEBUG_MODE  }}
+          DJANGO_DEBUG: ${{ env.DJANGO_DEBUG }}
           DJANGO_ALLOWED_HOSTS: ${{ env.ALLOWED_HOSTS }}
           DJANGO_DB: ${{ env.DJANGO_DB }}
           DJANGO_DB_NAME: ${{ env.DJANGO_DB_NAME }}
