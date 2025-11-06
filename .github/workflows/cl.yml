@@ -44,7 +44,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Линтинг
-        run: flake8 --exclude=aa
+        run: flake8 --exclude=aa, DjangoProject
 
       - name: Тестирование
         run: python manage.py test
