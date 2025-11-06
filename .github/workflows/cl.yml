@@ -51,27 +51,23 @@ jobs:
           set -euo pipefail
           for i in {1..20}; do
             if PGPASSWORD="${{ secrets.DJANGO_DB_PASSWORD }}" \
-                psql -h "postgresql_main" -U "${{ secrets.DJANGO_DB_USER }}" \
-                -d "${{ secrets.DJANGO_DB_NAME }}" -c '\q' 2>/dev/null; then
+               psql -h "postgresql_main" -U "${{ secrets.DJANGO_DB_USER }}" \
+               -d "${{ secrets.DJANGO_DB_NAME }}" -c '\q' 2>/dev/null; then
               echo "PostgreSQL is ready"
               break
             fi
-              echo "Waiting for PostgreSQL..."
-              sleep 2
-            done
-          env:
-            DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
-            DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
-            DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
 
       - name: Тестирование
         run: python manage.py test
         env:
-          SECRET_KEY: ${{ env.SECRET_KEY }}
-          DJANGO_DEBUG: ${{ env.DJANGO_DEBUG}}
-          DJANGO_ALLOWED_HOSTS: ${{ env.DJANGO_ALLOWED_HOSTS}}
-          DJANGO_DB_NAME: ${{ env.DJANGO_DB_NAME }}
-          DJANGO_DB_USER: ${{ env.DJANGO_DB_USER }}
-          DJANGO_DB_PASSWORD: ${{ env.DJANGO_DB_PASSWORD }}
+          SECRET_KEY: ${{ secrets.SECRET }}
+          DJANGO_DEBUG: ${{ secrets.DEBUG_MODE }}
+          DJANGO_ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
+          DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
+          DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
+          DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
           DJANGO_DB_HOST: postgresql_main
           DJANGO_DB_PORT: 5432
