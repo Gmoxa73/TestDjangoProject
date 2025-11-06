@@ -1,0 +1,62 @@
+name: Testing and deployment
+
+on:
+  push:
+    branches: [master]
+
+
+jobs:
+  testing:
+    runs-on: ubuntu-24.04 [Beta]
+    env:
+      SECRET_KEY: ${{ secrets.SECRET }}
+      DJANGO_DEBUG: ${{ secrets.DEBUG_MODE  }}
+      DJANGO_ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
+      DJANGO_DB: ${{ secrets.DJANGO_DB }}
+      DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
+      DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
+      DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
+      DJANGO_DB_HOST: ${{ secrets.DJANGO_DB_HOST }}
+      DJANGO_DB_PORT: ${{ DJANGO_DB_PORT }}
+    services:
+      postgresql_main:
+        image: postgres:12
+        env:
+          DJANGO_DB_NAME: ${{ env.DJANGO_DB_NAME }}
+          DJANGO_DB_USER: ${{ env.DJANGO_DB_USER }}
+          DJANGO_DB_PASSWORD: ${{ env.DJANGO_DB_PASSWORD }}
+        ports:
+          - 5432:5432
+        options:
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Проверяем на наличие изменений
+        uses: actions/checkout@v4
+
+      - name: Установка Python
+        uses: actions/setup-python@v4
+        with:
+          - python-version: 3.12
+
+      - name: Установка зависимостей
+        run: pip install -r requirements.txt
+
+      - name: Линтинг
+        run: flake8 --exclude=aa/migrations
+
+      - name: Тестирование
+        run: python manage.py test
+        env:
+          SECRET_KEY: ${{ secrets.SECRET }}
+          DJANGO_DEBUG: ${{ secrets.DEBUG_MODE  }}
+          DJANGO_ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
+          DJANGO_DB: ${{ secrets.DJANGO_DB }}
+          DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
+          DJANGO_DB_USER: ${{ secrets.DJANGO_DB_USER }}
+          DJANGO_DB_PASSWORD: ${{ secrets.DJANGO_DB_PASSWORD }}
+          DJANGO_DB_HOST: ${{ secrets.DJANGO_DB_HOST }}
+          DJANGO_DB_PORT: ${{ DJANGO_DB_PORT }}
+
