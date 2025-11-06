@@ -57,8 +57,21 @@ jobs:
           python manage.py makemigrations --check || echo "No changes detected"
           python manage.py migrate
 
-      - name: Verify auth_user exists
-        run: python manage.py shell -c "\dt auth_user"
+      - name: Check auth_user table exists
+        run: |
+          python manage.py shell --command="
+          from django.db import connection;
+          with connection.cursor() as cursor:
+              cursor.execute(\"\"\"
+                  SELECT 1 FROM pg_tables
+                  WHERE tablename = 'auth_user' AND schemaname = 'public';
+              \"\"\");
+              if cursor.fetchone():
+                  print('OK: Таблица auth_user найдена')
+              else:
+                  raise SystemExit('ERROR: Таблица auth_user отсутствует!')
+          "
+        env:
 
       - name: Run tests
         env:
